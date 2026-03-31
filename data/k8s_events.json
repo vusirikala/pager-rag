@@ -1,0 +1,164 @@
+[
+  {
+    "timestamp": "2026-03-30T19:28:05.100Z",
+    "kind": "Pod",
+    "name": "image-processing-worker-xyz12",
+    "environment": "production",
+    "reason": "OOMKilled",
+    "message": "Pod image-processing-worker-xyz12 (container image-processor) was terminated by the OOM killer.",
+    "_scenario_id": "scenario-1"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:20.200Z",
+    "kind": "Pod",
+    "name": "image-processing-worker-xyz12",
+    "environment": "production",
+    "reason": "Killing",
+    "message": "Stopping container image-processor",
+    "_scenario_id": "scenario-1"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:35.000Z",
+    "kind": "HorizontalPodAutoscaler",
+    "name": "checkout-service-hpa",
+    "environment": "production",
+    "reason": "ScalingReplicaSet",
+    "message": "Scaled up replica set checkout-service-v1 to 5 from 3 due to increased CPU utilization and request queueing.",
+    "_scenario_id": "scenario-3"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:35.300Z",
+    "kind": "Pod",
+    "name": "image-processing-worker-xyz12",
+    "environment": "production",
+    "reason": "Failed",
+    "message": "Error: OOMKilled",
+    "_scenario_id": "scenario-1"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:50.400Z",
+    "kind": "Pod",
+    "name": "image-processing-worker-abc34",
+    "environment": "production",
+    "reason": "Scheduled",
+    "message": "Successfully assigned image-processing-worker-abc34 to node-02",
+    "_scenario_id": "scenario-1"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:55.900Z",
+    "kind": "Deployment",
+    "name": "auth-service-v2.1",
+    "environment": "production",
+    "reason": "ScalingReplicaSet",
+    "message": "Scaled up replica set auth-service-v2.1-7b8c9d to 3",
+    "_scenario_id": "scenario-4"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:56.100Z",
+    "kind": "Pod",
+    "name": "auth-service-v2.1-7b8c9d-abcde",
+    "environment": "production",
+    "reason": "Pulling",
+    "message": "Pulling image 'myregistry/auth-service:2.1.0'",
+    "_scenario_id": "scenario-4"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:56.150Z",
+    "kind": "Pod",
+    "name": "auth-service-v2.1-7b8c9d-abcde",
+    "environment": "production",
+    "reason": "Created",
+    "message": "Created container auth-service",
+    "_scenario_id": "scenario-4"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:57.600Z",
+    "kind": "Pod",
+    "name": "auth-service-v2.1-7b8c9d-abcde",
+    "environment": "production",
+    "reason": "BackOff",
+    "message": "Back-off restarting failed container auth-service in pod auth-service-v2.1-7b8c9d-abcde_production(9a8b7c6d-e5f4-3a2b-1c0d-9e8f7a6b5c4d)",
+    "_scenario_id": "scenario-4"
+  },
+  {
+    "timestamp": "2026-03-30T19:28:59.000Z",
+    "kind": "Pod",
+    "name": "auth-service-v2.1-7b8c9d-fghij",
+    "environment": "production",
+    "reason": "BackOff",
+    "message": "Back-off restarting failed container auth-service in pod auth-service-v2.1-7b8c9d-fghij_production(1a2b3c4d-e5f6-7a8b-9c0d-1e2f3a4b5c6d)",
+    "_scenario_id": "scenario-4"
+  },
+  {
+    "timestamp": "2026-03-30T19:29:05.500Z",
+    "kind": "Pod",
+    "name": "image-processing-worker-abc34",
+    "environment": "production",
+    "reason": "Pulled",
+    "message": "Container image \"my-registry/image-processor:1.2.0\" already present on machine",
+    "_scenario_id": "scenario-1"
+  },
+  {
+    "timestamp": "2026-03-30T19:29:06.800Z",
+    "kind": "Pod",
+    "name": "redis-cache-789abcde-fghij",
+    "environment": "production",
+    "reason": "OOMKilled",
+    "message": "Pod redis-cache-789abcde-fghij was OOMKilled.",
+    "_scenario_id": "scenario-5"
+  },
+  {
+    "timestamp": "2026-03-30T19:29:07.000Z",
+    "kind": "Pod",
+    "name": "redis-cache-789abcde-fghij",
+    "environment": "production",
+    "reason": "Killing",
+    "message": "Stopping container redis-cache.",
+    "_scenario_id": "scenario-5"
+  },
+  {
+    "timestamp": "2026-03-30T19:29:14.500Z",
+    "kind": "Pod",
+    "name": "inventory-service-abcde-12345",
+    "environment": "production",
+    "reason": "Unhealthy",
+    "message": "Liveness probe failed: HTTP GET http://10.42.0.5:8080/healthz timed out",
+    "_scenario_id": "scenario-2"
+  },
+  {
+    "timestamp": "2026-03-30T19:29:16.500Z",
+    "kind": "Pod",
+    "name": "inventory-service-abcde-12345",
+    "environment": "production",
+    "reason": "LivenessProbeFailed",
+    "message": "Liveness probe failed; will restart pod.",
+    "_scenario_id": "scenario-2"
+  },
+  {
+    "timestamp": "2026-03-30T19:29:17.000Z",
+    "kind": "Pod",
+    "name": "inventory-service-abcde-12345",
+    "environment": "production",
+    "reason": "Killing",
+    "message": "Stopping container inventory-service",
+    "_scenario_id": "scenario-2"
+  },
+  {
+    "timestamp": "2026-03-30T19:29:18.500Z",
+    "kind": "Pod",
+    "name": "redis-cache-new-pod-klmno",
+    "environment": "production",
+    "reason": "Scheduled",
+    "message": "Successfully assigned production/redis-cache-new-pod-klmno to node-123",
+    "_scenario_id": "scenario-5"
+  },
+  {
+    "timestamp": "2026-03-30T19:29:19.500Z",
+    "kind": "Pod",
+    "name": "redis-cache-new-pod-klmno",
+    "environment": "production",
+    "reason": "Started",
+    "message": "Started container redis-cache.",
+    "_scenario_id": "scenario-5"
+  }
+]

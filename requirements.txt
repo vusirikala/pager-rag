@@ -1,0 +1,7 @@
+pinecone-client
+python-dotenv
+google-genai
+pydantic
+rich
+langchain
+langchain-text-splitters

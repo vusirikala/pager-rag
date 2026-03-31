@@ -1,0 +1,52 @@
+[
+  {
+    "id": "pd-oom-worker-789",
+    "created_at": "2026-03-30T19:29:30.000Z",
+    "service_affected": "image-processing-worker",
+    "environment": "production",
+    "title": "[Production] image-processing-worker OOMKilled - Critical Memory Exhaustion",
+    "description": "The 'image-processing-worker' pod 'image-processing-worker-xyz12' in production was terminated by the Kubernetes OOM killer. This indicates severe memory exhaustion, likely due to a memory leak or inefficient resource usage. The service has been restarted, but underlying issue needs immediate investigation.",
+    "urgency": "high",
+    "_scenario_id": "scenario-1"
+  },
+  {
+    "id": "inv-svc-high-error-20260330-1",
+    "created_at": "2026-03-30T19:29:13.500Z",
+    "service_affected": "inventory-service",
+    "environment": "production",
+    "title": "High Error Rate: inventory-service experiencing 5xx errors",
+    "description": "The inventory-service is experiencing a high rate of 5xx responses, likely due to database connection acquisition timeouts caused by a recent traffic spike. Investigate database performance and connection pool settings.",
+    "urgency": "high",
+    "_scenario_id": "scenario-2"
+  },
+  {
+    "id": "alert-lat-checkout-1",
+    "created_at": "2026-03-30T19:28:40.000Z",
+    "service_affected": "checkout-service",
+    "environment": "production",
+    "title": "High Latency & Errors in Checkout Service",
+    "description": "The checkout-service is experiencing high latency and 'context deadline exceeded' errors when communicating with the payment-gateway. This is likely due to an upstream issue with the third-party payment provider, which is taking over 10 seconds to respond.",
+    "urgency": "high",
+    "_scenario_id": "scenario-3"
+  },
+  {
+    "id": "auth-deploy-fail-20260330-001",
+    "created_at": "2026-03-30T19:29:02.500Z",
+    "service_affected": "auth-service",
+    "environment": "production",
+    "title": "Auth Service v2.1 Deployment Failed - CrashLoopBackOff",
+    "description": "The new deployment of auth-service (v2.1.0) is experiencing continuous CrashLoopBackOff states across all pods. Application logs indicate 'Failed to parse configuration: invalid JSON format at line 5, column 12'. This is severely impacting user authentication and dependent services.",
+    "urgency": "high",
+    "_scenario_id": "scenario-4"
+  },
+  {
+    "id": "DB_TIMEOUT_PROD_12345",
+    "created_at": "2026-03-30T19:29:15.000Z",
+    "service_affected": "user-profile-service",
+    "environment": "production",
+    "title": "High Latency & Timeouts in User Profile Service (Database)",
+    "description": "The user-profile-service is experiencing severe database query timeouts and high latency. This is likely due to an upstream cache failure (Redis) causing a thundering herd problem on the user-db, leading to connection pool exhaustion.",
+    "urgency": "high",
+    "_scenario_id": "scenario-5"
+  }
+]
