@@ -19,16 +19,24 @@ es_client = AsyncElasticsearch("http://localhost:9200")
 gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 INDEX_NAME = "pager-rag-logs"
-EMBEDDING_MODEL = "text-embedding-004"
+EMBEDDING_MODEL = "gemini-embedding-001"
 LLM_MODEL = "gemini-2.5-flash"
 
 async def get_embedding(text: str) -> list[float]:
     """Get vector embedding from Google Gemini."""
-    response = await gemini_client.aio.models.embed_content(
-        model=EMBEDDING_MODEL,
-        contents=text
-    )
-    return response.embeddings[0].values
+    try:
+        from google.genai import types
+        response = await gemini_client.aio.models.embed_content(
+            model="gemini-embedding-001",
+            contents=text,
+            config=types.EmbedContentConfig(output_dimensionality=768)
+        )
+        if not response.embeddings:
+            return [0.0] * 768
+        return response.embeddings[0].values
+    except Exception as e:
+        console.print(f"[red]Failed to get embedding: {e}[/red]")
+        return [0.0] * 768
 
 async def execute_rag(alert: dict):
     console.rule(f"[bold red]Investigating Incident: {alert['title']}")
@@ -52,6 +60,7 @@ async def execute_rag(alert: dict):
     end_time_iso = (alert_time + timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
     
     # We want to find the specific error logs. We use semantic similarity + metadata filters
+    # Elasticsearch KNN requires the query vector
     query_body = {
         "size": 5,
         "query": {

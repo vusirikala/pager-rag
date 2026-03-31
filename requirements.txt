@@ -1,5 +1,6 @@
 elasticsearch
 elasticsearch-dsl
+aiohttp
 python-dotenv
 google-genai
 pydantic

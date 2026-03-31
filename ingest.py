@@ -3,6 +3,7 @@ import json
 import asyncio
 from typing import List, Dict, Any
 from google import genai
+from google.genai import types
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
 from dotenv import load_dotenv
@@ -23,7 +24,7 @@ es_client = AsyncElasticsearch("http://localhost:9200")
 gemini_client = genai.Client(api_key=gemini_api_key)
 
 INDEX_NAME = "pager-rag-logs"
-EMBEDDING_MODEL = "text-embedding-004"
+EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_DIMENSION = 768
 
 async def setup_elasticsearch():
@@ -50,18 +51,25 @@ async def setup_elasticsearch():
                 }
             }
         }
-        await es_client.indices.create(index=INDEX_NAME, body=mapping)
+        await es_client.indices.create(index=INDEX_NAME, mappings=mapping["mappings"])
         console.print(f"[green]Index '{INDEX_NAME}' created successfully.[/green]")
     else:
         console.print(f"[green]Index '{INDEX_NAME}' already exists.[/green]")
 
 async def get_embedding(text: str) -> List[float]:
     """Get vector embedding from Google Gemini."""
-    response = await gemini_client.aio.models.embed_content(
-        model=EMBEDDING_MODEL,
-        contents=text
-    )
-    return response.embeddings[0].values
+    try:
+        response = await gemini_client.aio.models.embed_content(
+            model='gemini-embedding-001',
+            contents=text,
+            config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIMENSION)
+        )
+        if not response.embeddings:
+            return [0.0] * EMBEDDING_DIMENSION
+        return response.embeddings[0].values
+    except Exception as e:
+        console.print(f"[red]Failed to get embedding: {e}[/red]")
+        return [0.0] * EMBEDDING_DIMENSION
 
 async def process_and_upsert(data: List[Dict[Any, Any]], item_type: str):
     """
@@ -72,19 +80,23 @@ async def process_and_upsert(data: List[Dict[Any, Any]], item_type: str):
         
     console.print(f"Processing {len(data)} {item_type}...")
     
-    BATCH_SIZE = 100 
+    BATCH_SIZE = 50 
     
     for i in track(range(0, len(data), BATCH_SIZE), description=f"Indexing {item_type}"):
         batch = data[i:i + BATCH_SIZE]
         actions = []
         
+        # Concurrently fetch embeddings for the batch
         texts_to_embed = [json.dumps({k: v for k, v in item.items() if k not in ['_scenario_id']}) for item in batch]
         
-        tasks = [get_embedding(text) for text in texts_to_embed]
-        embeddings = await asyncio.gather(*tasks)
-        
-        for item, embedding, text in zip(batch, embeddings, texts_to_embed):
-            doc_id = f"{item_type}-{item.get('trace_id', item.get('name', str(hash(text))))}"
+        # Use simple for loop instead of gather to avoid hitting rate limits or weird async gemini bugs
+        embeddings = []
+        for text in texts_to_embed:
+            emb = await get_embedding(text)
+            embeddings.append(emb)
+                
+        for j, (item, embedding, text) in enumerate(zip(batch, embeddings, texts_to_embed)):
+            doc_id = f"{item_type}-{i + j}"
             
             doc = {
                 "_index": INDEX_NAME,
@@ -100,7 +112,13 @@ async def process_and_upsert(data: List[Dict[Any, Any]], item_type: str):
             }
             actions.append(doc)
             
-        await async_bulk(es_client, actions)
+        try:
+            await async_bulk(es_client, actions)
+        except Exception as e:
+            if hasattr(e, 'errors'):
+                console.print(f"[red]BulkIndexError: {e.errors[0]}[/red]")
+            else:
+                console.print(f"[red]Error indexing to ES: {e}[/red]")
 
 async def main():
     console.rule("[bold blue]Pager-RAG Elasticsearch Ingestion Script")
@@ -118,15 +136,10 @@ async def main():
         await es_client.close()
         return
         
-    incident_logs = [log for log in logs if log.get("_scenario_id") != "background-noise"]
-    noise_logs = [log for log in logs if log.get("_scenario_id") == "background-noise"]
-    
-    sampled_logs = incident_logs + noise_logs[:1000] 
-    
-    console.print(f"[yellow]Loaded {len(sampled_logs)} logs (downsampled from {len(logs)}) and {len(events)} events for ingestion.[/yellow]")
+    console.print(f"[yellow]Loaded {len(logs)} logs and {len(events)} events for ingestion.[/yellow]")
     
     # 2. Process and Upsert
-    await process_and_upsert(sampled_logs, "app_log")
+    await process_and_upsert(logs, "app_log")
     await process_and_upsert(events, "k8s_event")
     
     # Force refresh
