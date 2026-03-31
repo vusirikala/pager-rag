@@ -3,7 +3,7 @@ import json
 import asyncio
 from datetime import datetime, timedelta
 from dateutil import parser
-from pinecone.grpc import PineconeGRPC as Pinecone
+from elasticsearch import AsyncElasticsearch
 from google import genai
 from dotenv import load_dotenv
 from rich.console import Console
@@ -15,11 +15,10 @@ from rich.markdown import Markdown
 load_dotenv()
 console = Console()
 
-# Initialize API Clients
-pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
-index = pc.Index("pager-rag-logs")
+es_client = AsyncElasticsearch("http://localhost:9200")
 gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
+INDEX_NAME = "pager-rag-logs"
 EMBEDDING_MODEL = "text-embedding-004"
 LLM_MODEL = "gemini-2.5-flash"
 
@@ -53,22 +52,36 @@ async def execute_rag(alert: dict):
     end_time_iso = (alert_time + timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
     
     # We want to find the specific error logs. We use semantic similarity + metadata filters
-    anchor_results = index.query(
-        namespace=env,
-        vector=query_vector,
-        top_k=5,
-        include_metadata=True,
-        filter={
-            "timestamp": {"$gte": start_time_iso, "$lte": end_time_iso},
-            # "level": {"$in": ["ERROR", "WARN"]} # Optionally filter to just errors
+    query_body = {
+        "size": 5,
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "knn": {
+                            "field": "embedding",
+                            "query_vector": query_vector,
+                            "k": 5,
+                            "num_candidates": 50
+                        }
+                    }
+                ],
+                "filter": [
+                    {"term": {"environment": env}},
+                    {"range": {"timestamp": {"gte": start_time_iso, "lte": end_time_iso}}}
+                ]
+            }
         }
-    )
+    }
     
-    if not anchor_results.matches:
+    anchor_response = await es_client.search(index=INDEX_NAME, body=query_body)
+    anchor_hits = anchor_response["hits"]["hits"]
+    
+    if not anchor_hits:
         console.print("[red]No logs found in this time window/environment![/red]")
         return
         
-    console.print(f"   Found [bold]{len(anchor_results.matches)}[/bold] relevant error logs.")
+    console.print(f"   Found [bold]{len(anchor_hits)}[/bold] relevant error logs.")
     
     # ---------------------------------------------------------
     # STEP 2: EXPAND - Trace-based and Time-based expansion
@@ -76,51 +89,48 @@ async def execute_rag(alert: dict):
     console.print("\n[cyan]2. Expanding:[/cyan] Extracting trace IDs and fetching the full distributed trace history...")
     
     trace_ids = set()
-    for match in anchor_results.matches:
-        tid = match.metadata.get("trace_id")
+    for hit in anchor_hits:
+        tid = hit["_source"].get("trace_id")
         if tid and tid != "":
             trace_ids.add(tid)
             
     expanded_logs = []
     
     if trace_ids:
-        console.print(f"   Found {len(trace_ids)} unique trace IDs. Querying Pinecone for the full journey...")
-        
-        # We don't even need vector search here. We just use metadata filtering.
-        # But Pinecone requires a vector or id for query, so we use a dummy vector 
-        # (or just use the same query vector but rely entirely on the filter)
-        # Note: the namespace MUST match the anchor log's namespace
-        # We query for ALL logs that share this trace ID, regardless of what service emitted them!
+        console.print(f"   Found {len(trace_ids)} unique trace IDs. Querying Elasticsearch for the full journey...")
         try:
-            trace_results = index.query(
-                namespace=env,
-                vector=[0.0] * 768, 
-                top_k=100, # Get the whole trace journey across all microservices
-                include_metadata=True,
-                filter={
-                    "trace_id": {"$in": list(trace_ids)}
+            trace_query = {
+                "size": 100,
+                "query": {
+                    "bool": {
+                        "filter": [
+                            {"term": {"environment": env}},
+                            {"terms": {"trace_id": list(trace_ids)}}
+                        ]
+                    }
                 }
-            )
-            expanded_logs = trace_results.matches
+            }
+            trace_results = await es_client.search(index=INDEX_NAME, body=trace_query)
+            expanded_logs = trace_results["hits"]["hits"]
         except Exception as e:
             console.print(f"[red]Error during trace expansion: {e}[/red]")
-            expanded_logs = anchor_results.matches
+            expanded_logs = anchor_hits
     else:
         # If no trace IDs (e.g., OOMKilled K8s event), we just use the anchor logs
-        # or we could do a secondary query for ALL logs around that specific second
         console.print("   No Trace IDs found. Relying on time-window anchor logs.")
-        expanded_logs = anchor_results.matches
+        expanded_logs = anchor_hits
         
     # Sort logs chronologically to help the LLM understand the sequence
-    expanded_logs.sort(key=lambda x: x.metadata.get("timestamp", ""))
+    expanded_logs.sort(key=lambda x: x["_source"].get("timestamp", ""))
     
     # Build the Context Payload
     context_str = ""
-    for log in expanded_logs:
-        service_name = log.metadata.get('service', 'unknown')
-        level = log.metadata.get('level', 'INFO')
-        ts = log.metadata.get('timestamp', '')
-        text = log.metadata.get('text', '')
+    for hit in expanded_logs:
+        log = hit["_source"]
+        service_name = log.get('service', 'unknown')
+        level = log.get('level', 'INFO')
+        ts = log.get('timestamp', '')
+        text = log.get('text', '')
         context_str += f"[{ts}] {service_name} [{level}]: {text}\n"
 
     console.print(f"   Compiled a highly-focused timeline of [bold]{len(expanded_logs)}[/bold] logs.")

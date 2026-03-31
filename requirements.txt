@@ -1,4 +1,5 @@
-pinecone-client
+elasticsearch
+elasticsearch-dsl
 python-dotenv
 google-genai
 pydantic
