@@ -1,9 +1,7 @@
 elasticsearch
-elasticsearch-dsl
 aiohttp
 python-dotenv
 google-genai
+python-dateutil
 pydantic
 rich
-langchain
-langchain-text-splitters
